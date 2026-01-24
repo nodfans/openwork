@@ -406,11 +406,14 @@ export function createWorkspaceStore(options: {
           .catch(() => undefined);
       }
 
-      options.refreshSkills({ force: true }).catch(() => undefined);
       if (!options.selectedSessionId()) {
         options.setView("dashboard");
         options.setTab("home");
       }
+
+      // Explicitly refresh extensions and templates after connection
+      await options.refreshSkills({ force: true }).catch(() => undefined);
+      await options.refreshPlugins().catch(() => undefined);
 
       // If the user successfully connected, treat onboarding as complete so we
       // don't force the onboarding flow on subsequent launches.
@@ -455,14 +458,7 @@ export function createWorkspaceStore(options: {
       const name = resolvedFolder.replace(/\\/g, "/").split("/").filter(Boolean).pop() ?? "Workspace";
       const ws = await workspaceCreate({ folderPath: resolvedFolder, name, preset });
       setWorkspaces(ws.workspaces);
-      syncActiveWorkspaceId(ws.activeId);
-
-      const active = ws.workspaces.find((w) => w.id === ws.activeId) ?? null;
-      if (active) {
-        setProjectDir(active.path);
-        setAuthorizedDirs([active.path]);
-        await options.loadWorkspaceTemplates({ workspaceRoot: active.path, quiet: true }).catch(() => undefined);
-      }
+      await activateWorkspace(ws.activeId);
 
       setWorkspacePickerOpen(false);
       setCreateWorkspaceOpen(false);
